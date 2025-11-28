@@ -1,7 +1,10 @@
-services:
+# Delete old render.yaml and create new one
+rm render.yaml
+echo "services:
   - type: web
     name: bill-extraction-api
     env: python
     plan: free
+    pythonVersion: \"3.11.0\"
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    startCommand: gunicorn app:app --bind 0.0.0.0:\$PORT" > render.yaml
