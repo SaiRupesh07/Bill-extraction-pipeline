@@ -1,54 +1,23 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
+import requests
+import threading
+import time
 
 app = Flask(__name__)
 CORS(app)
 
-@app.route('/')
-def root():
-    return jsonify({
-        "message": "Medical Bill Extraction API - Bajaj Health Datathon",
-        "version": "1.0.0", 
-        "status": "running",
-        "endpoints": {
-            "health": "/health",
-            "extract_bill_data": "/extract-bill-data",
-            "docs": "https://bill-extraction-api.onrender.com/"  # Will be the root
-        }
-    })
-
-@app.route('/health', methods=['GET'])
-def health_check():
-    return jsonify({
-        "status": "healthy",
-        "service": "bill-extraction-api"
-    })
-
-@app.route('/extract-bill-data', methods=['POST'])
-def extract_bill_data():
+def process_bill_async(document_url, webhook_url):
     """
-    Extract bill data from document URL
-    - Accepts: {"document": "https://example.com/bill.png"}
-    - Returns: Hackathon-specified response format
+    Process bill extraction asynchronously and send results to webhook
     """
     try:
-        # Get request data
-        data = request.get_json()
+        # Simulate processing time
+        time.sleep(2)
         
-        if not data or 'document' not in data:
-            return jsonify({
-                "is_success": False,
-                "error": "Missing 'document' field in request"
-            }), 400
-        
-        document_url = data['document']
-        
-        # Log the request
-        print(f"Processing bill extraction for: {document_url}")
-        
-        # Return consistent mock data matching exact hackathon format
-        response_data = {
+        # Your bill processing logic here
+        result = {
             "is_success": True,
             "data": {
                 "pagewise_line_items": [
@@ -66,18 +35,6 @@ def extract_bill_data():
                                 "item_amount": 124.83,
                                 "item_rate": 17.83,
                                 "item_quantity": 7
-                            },
-                            {
-                                "item_name": "Pizat 4.5mg",
-                                "item_amount": 838.12,
-                                "item_rate": 419.06,
-                                "item_quantity": 2
-                            },
-                            {
-                                "item_name": "Consultation Fee",
-                                "item_amount": 150.0,
-                                "item_rate": 150.0,
-                                "item_quantity": 1
                             }
                         ]
                     }
@@ -87,14 +44,56 @@ def extract_bill_data():
             }
         }
         
-        return jsonify(response_data)
+        # Send results to webhook URL
+        requests.post(webhook_url, json=result, timeout=10)
         
     except Exception as e:
-        print(f"Error processing request: {e}")
+        # Send error to webhook
+        error_result = {
+            "is_success": False,
+            "error": f"Processing failed: {str(e)}"
+        }
+        requests.post(webhook_url, json=error_result, timeout=10)
+
+@app.route('/extract-bill-data-webhook', methods=['POST'])
+def extract_bill_data_webhook():
+    """
+    Asynchronous bill extraction with webhook support
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'document' not in data or 'webhook_url' not in data:
+            return jsonify({
+                "is_success": False,
+                "error": "Missing 'document' or 'webhook_url' in request"
+            }), 400
+        
+        document_url = data['document']
+        webhook_url = data['webhook_url']
+        
+        # Start async processing
+        thread = threading.Thread(
+            target=process_bill_async,
+            args=(document_url, webhook_url)
+        )
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            "is_success": True,
+            "message": "Bill processing started",
+            "processing_id": f"proc_{int(time.time())}",
+            "status": "processing"
+        })
+        
+    except Exception as e:
         return jsonify({
             "is_success": False,
-            "error": f"Internal server error: {str(e)}"
+            "error": f"Failed to start processing: {str(e)}"
         }), 500
+
+# ... (keep your existing routes)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
