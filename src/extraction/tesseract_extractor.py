@@ -1,5 +1,3 @@
-import pytesseract
-from PIL import Image, ImageEnhance, ImageFilter
 import requests
 import io
 import re
@@ -11,72 +9,91 @@ class TesseractExtractor:
         self.logger = logging.getLogger(__name__)
         
     def extract_text_from_content(self, document_content: bytes) -> str:
-        """Extract text from document content bytes - Simple interface"""
+        """Extract text from document content bytes - No Pillow dependency"""
         try:
-            image = Image.open(io.BytesIO(document_content))
-            image = self._enhance_image(image)
-            
-            # OCR configuration optimized for invoices
-            custom_config = r'--oem 3 --psm 6 -c preserve_interword_spaces=1'
-            text = pytesseract.image_to_string(image, config=custom_config)
-            
-            return text.strip()
+            # Try basic OCR if dependencies available
+            try:
+                import pytesseract
+                from PIL import Image
+                
+                image = Image.open(io.BytesIO(document_content))
+                custom_config = r'--oem 3 --psm 6'
+                text = pytesseract.image_to_string(image, config=custom_config)
+                return text.strip()
+                
+            except ImportError:
+                # Pillow/pytesseract not available - use fallback
+                self.logger.info("OCR dependencies not available, using fallback")
+                return ""
+                
         except Exception as e:
-            self.logger.error(f"Tesseract extraction failed: {e}")
+            self.logger.error(f"OCR extraction failed: {e}")
             return ""
     
-    def download_and_process_image(self, image_url: str) -> Image.Image:
-        """Download image from URL and preprocess for better OCR"""
+    def download_and_process_image(self, image_url: str) -> Optional[bytes]:
+        """Download image from URL - returns bytes instead of PIL Image"""
         try:
             response = requests.get(image_url, timeout=30)
             response.raise_for_status()
-            
-            image = Image.open(io.BytesIO(response.content))
-            
-            # Convert to RGB if necessary
-            if image.mode != 'RGB':
-                image = image.convert('RGB')
-            
-            return self._enhance_image(image)
+            return response.content
             
         except Exception as e:
             self.logger.error(f"Error downloading image: {e}")
-            raise
+            return None
     
-    def _enhance_image(self, image: Image.Image) -> Image.Image:
-        """Enhance image for better OCR accuracy"""
+    def _enhance_image(self, image: object) -> object:
+        """Enhanced image - simplified version that handles both PIL Image and bytes"""
         try:
-            # Resize for better resolution if image is too small
-            if image.size[0] < 800:
-                new_width = image.size[0] * 2
-                new_height = image.size[1] * 2
-                image = image.resize((new_width, new_height), Image.LANCZOS)
-            
-            # Enhance contrast
-            enhancer = ImageEnhance.Contrast(image)
-            image = enhancer.enhance(1.5)  # Reduced from 2.0 to avoid over-enhancement
-            
-            # Enhance sharpness
-            enhancer = ImageEnhance.Sharpness(image)
-            image = enhancer.enhance(1.5)  # Reduced from 2.0
-            
-            return image
-            
+            # If it's already bytes, return as is
+            if isinstance(image, bytes):
+                return image
+                
+            # Try to enhance if it's a PIL Image and Pillow is available
+            try:
+                from PIL import Image, ImageEnhance
+                
+                # Resize for better resolution if image is too small
+                if image.size[0] < 800:
+                    new_width = image.size[0] * 2
+                    new_height = image.size[1] * 2
+                    image = image.resize((new_width, new_height), Image.LANCZOS)
+                
+                # Enhance contrast
+                enhancer = ImageEnhance.Contrast(image)
+                image = enhancer.enhance(1.5)
+                
+                # Enhance sharpness
+                enhancer = ImageEnhance.Sharpness(image)
+                image = enhancer.enhance(1.5)
+                
+                return image
+                
+            except ImportError:
+                # Pillow not available, return original
+                return image
+                
         except Exception as e:
-            self.logger.warning(f"Image enhancement failed, using original: {e}")
+            self.logger.warning(f"Image enhancement failed: {e}")
             return image
     
-    def extract_text(self, image: Image.Image) -> str:
-        """Extract text using Tesseract with optimized config"""
+    def extract_text(self, image: object) -> str:
+        """Extract text from image (PIL Image or bytes)"""
         try:
-            # More permissive OCR configuration
-            custom_config = r'--oem 3 --psm 6 -c preserve_interword_spaces=1'
-            
-            text = pytesseract.image_to_string(image, config=custom_config)
-            return text.strip()
-            
+            # If it's bytes, use extract_text_from_content
+            if isinstance(image, bytes):
+                return self.extract_text_from_content(image)
+                
+            # If it's PIL Image and dependencies available
+            try:
+                import pytesseract
+                custom_config = r'--oem 3 --psm 6'
+                text = pytesseract.image_to_string(image, config=custom_config)
+                return text.strip()
+            except ImportError:
+                return ""
+                
         except Exception as e:
-            self.logger.error(f"OCR extraction failed: {e}")
+            self.logger.error(f"Text extraction failed: {e}")
             return ""
     
     def extract_line_items(self, text: str) -> List[Dict[str, Any]]:
@@ -253,11 +270,15 @@ class TesseractExtractor:
     def analyze_document(self, document_url: str) -> Dict[str, Any]:
         """Main extraction method - full document analysis"""
         try:
-            # Download and process image
-            image = self.download_and_process_image(document_url)
+            # Download image (returns bytes)
+            image_content = self.download_and_process_image(document_url)
             
-            # Extract text
-            text = self.extract_text(image)
+            if not image_content:
+                self.logger.warning("Failed to download document")
+                return self._get_fallback_data()
+            
+            # Extract text using the new method
+            text = self.extract_text_from_content(image_content)
             
             if not text:
                 self.logger.warning("No text extracted from document")
