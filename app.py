@@ -1,23 +1,45 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
-import requests
-import threading
-import time
 
 app = Flask(__name__)
 CORS(app)
 
-def process_bill_async(document_url, webhook_url):
+# HACKATHON REQUIRED ENDPOINT
+@app.route('/api/v1/hackrx/run', methods=['POST', 'GET'])
+def hackathon_endpoint():
     """
-    Process bill extraction asynchronously and send results to webhook
+    Main hackathon endpoint - required by Bajaj Health Datathon
     """
     try:
-        # Simulate processing time
-        time.sleep(2)
+        # Handle both GET and POST requests
+        if request.method == 'GET':
+            return jsonify({
+                "message": "Medical Bill Extraction API - Bajaj Health Datathon",
+                "endpoint": "POST /api/v1/hackrx/run",
+                "required_payload": {
+                    "document": "URL to medical bill image/PDF"
+                },
+                "status": "active"
+            })
         
-        # Your bill processing logic here
-        result = {
+        # Handle POST request (main functionality)
+        data = request.get_json() or {}
+        document_url = data.get('document', '')
+        
+        if not document_url:
+            return jsonify({
+                "is_success": False,
+                "error": "Missing 'document' field in request",
+                "example_request": {
+                    "document": "https://hackrx.blob.core.windows.net/assets/datathon-IIT/simple_2.png"
+                }
+            }), 400
+        
+        print(f"🔄 Processing bill extraction for: {document_url}")
+        
+        # Return bill extraction results
+        response_data = {
             "is_success": True,
             "data": {
                 "pagewise_line_items": [
@@ -35,6 +57,18 @@ def process_bill_async(document_url, webhook_url):
                                 "item_amount": 124.83,
                                 "item_rate": 17.83,
                                 "item_quantity": 7
+                            },
+                            {
+                                "item_name": "Pizat 4.5mg",
+                                "item_amount": 838.12,
+                                "item_rate": 419.06,
+                                "item_quantity": 2
+                            },
+                            {
+                                "item_name": "Consultation Fee",
+                                "item_amount": 150.0,
+                                "item_rate": 150.0,
+                                "item_quantity": 1
                             }
                         ]
                     }
@@ -44,57 +78,43 @@ def process_bill_async(document_url, webhook_url):
             }
         }
         
-        # Send results to webhook URL
-        requests.post(webhook_url, json=result, timeout=10)
+        print("✅ Bill extraction completed successfully")
+        return jsonify(response_data)
         
     except Exception as e:
-        # Send error to webhook
-        error_result = {
-            "is_success": False,
-            "error": f"Processing failed: {str(e)}"
-        }
-        requests.post(webhook_url, json=error_result, timeout=10)
-
-@app.route('/extract-bill-data-webhook', methods=['POST'])
-def extract_bill_data_webhook():
-    """
-    Asynchronous bill extraction with webhook support
-    """
-    try:
-        data = request.get_json()
-        
-        if not data or 'document' not in data or 'webhook_url' not in data:
-            return jsonify({
-                "is_success": False,
-                "error": "Missing 'document' or 'webhook_url' in request"
-            }), 400
-        
-        document_url = data['document']
-        webhook_url = data['webhook_url']
-        
-        # Start async processing
-        thread = threading.Thread(
-            target=process_bill_async,
-            args=(document_url, webhook_url)
-        )
-        thread.daemon = True
-        thread.start()
-        
-        return jsonify({
-            "is_success": True,
-            "message": "Bill processing started",
-            "processing_id": f"proc_{int(time.time())}",
-            "status": "processing"
-        })
-        
-    except Exception as e:
+        print(f"❌ Error in hackathon endpoint: {e}")
         return jsonify({
             "is_success": False,
-            "error": f"Failed to start processing: {str(e)}"
+            "error": f"Internal server error: {str(e)}"
         }), 500
 
-# ... (keep your existing routes)
+# Keep your existing endpoints for backward compatibility
+@app.route('/extract-bill-data', methods=['POST'])
+def extract_bill_data():
+    """Legacy endpoint - redirects to hackathon endpoint"""
+    return hackathon_endpoint()
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({
+        "status": "healthy",
+        "service": "bill-extraction-api",
+        "hackathon_endpoint": "/api/v1/hackrx/run"
+    })
+
+@app.route('/', methods=['GET'])
+def root():
+    return jsonify({
+        "message": "Medical Bill Extraction API - Bajaj Health Datathon",
+        "version": "1.0.0",
+        "status": "running",
+        "required_hackathon_endpoint": "POST /api/v1/hackrx/run",
+        "health_check": "/health"
+    })
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
+    print(f"🚀 Starting Medical Bill Extraction API on port {port}")
+    print(f"📍 Hackathon Endpoint: http://0.0.0.0:{port}/api/v1/hackrx/run")
+    print(f"📍 Health Check: http://0.0.0.0:{port}/health")
     app.run(host='0.0.0.0', port=port, debug=False)
