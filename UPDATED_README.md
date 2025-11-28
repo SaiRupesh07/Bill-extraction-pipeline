@@ -189,7 +189,7 @@ Open a Pull Request
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 👥 Author
-Sai Rupesh
+D.Sai Rupesh
 
 GitHub: @SaiRupesh07
 
