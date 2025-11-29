@@ -5,7 +5,7 @@ import requests
 import logging
 import time
 from datetime import datetime
-from rapidfuzz import fuzz, process  # Modern, fast alternative to Levenshtein
+from rapidfuzz import fuzz  # Modern, fast alternative to Levenshtein
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -38,14 +38,6 @@ class IntelligentBillExtractor:
             "services": ["room", "nursing", "emergency", "overnight", "ward", "icu", "or", "er", "admission", "discharge", "registration", "facility", "hospital"],
             "equipment": ["device", "apparatus", "kit", "set", "instrument", "supply", "appliance", "equipment", "tool"],
             "facility_fees": ["admission", "discharge", "registration", "admin", "facility", "hospital", "clinic", "service", "charge"]
-        }
-        
-        # Accuracy tracking
-        self.accuracy_metrics = {
-            "line_item_extraction": 0.93,
-            "total_reconciliation": 0.98,
-            "medical_context_detection": 0.91,  # Improved
-            "bill_type_classification": 0.87
         }
     
     def intelligent_extraction(self, document_url):
