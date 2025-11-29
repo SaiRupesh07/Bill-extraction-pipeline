@@ -6,12 +6,15 @@ python-dotenv==1.0.0
 fuzzywuzzy==0.18.0
 rapidfuzz==3.9.4
 
+# 🆕 UPDATED VERSIONS FOR PYTHON 3.13 COMPATIBILITY
 pytesseract==0.3.10
-Pillow==10.0.1
-opencv-python==4.8.1.78
-numpy==1.24.3
+Pillow==10.3.0  # 🚨 UPDATED - Compatible with Python 3.13
+opencv-python-headless==4.8.1.78  # 🚨 UPDATED - Lighter version
+numpy==1.26.4  # 🚨 UPDATED - Latest stable
 
+# 🆕 ADDED FOR DEPLOYMENT & MONITORING
 pyngrok==7.0.0
 Werkzeug==2.3.7
 
+# 🆕 ADDED FOR ENHANCED PERFORMANCE
 python-levenshtein==0.21.1
