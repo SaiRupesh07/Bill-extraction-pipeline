@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
@@ -6,6 +5,7 @@ import requests
 import logging
 import time
 from datetime import datetime
+import time as time_module  # Alternative for timestamp
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -14,13 +14,13 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 
-# Global metrics tracking
+# Global metrics tracking - FIXED datetime issue
 REQUEST_METRICS = {
     "total_requests": 0,
     "successful_requests": 0,
     "failed_requests": 0,
     "error_breakdown": {},
-    "start_time": datetime.now(datetime.timezone.utc).isoformat()
+    "start_time": datetime.now().isoformat()  # FIXED: Using simple datetime.now()
 }
 
 class IntelligentBillExtractor:
@@ -130,7 +130,7 @@ class IntelligentBillExtractor:
                 {"item_name": "Basic Consultation", "item_amount": 350.0, "item_rate": 350.0, "item_quantity": 1},
                 {"item_name": "Standard Tests", "item_amount": 200.0, "item_rate": 200.0, "item_quantity": 1}
             ],
-            "totals": {"Total": 550.0},
+                "totals": {"Total": 550.0},
             "confidence": 0.85,
             "bill_type": "fallback"
         }
@@ -265,7 +265,7 @@ def enhanced_error_response(error_type, details=""):
             "details": details,
             "suggestion": "Please check the bill data structure and ensure required fields are present",
             "docs_url": "https://github.com/your-repo/docs/errors/VALIDATION_001",
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now().isoformat()  # FIXED
         },
         "processing_error": {
             "status": "error", 
@@ -274,7 +274,7 @@ def enhanced_error_response(error_type, details=""):
             "details": details,
             "suggestion": "Try simplifying the bill structure or check data format. Ensure amounts are properly formatted.",
             "docs_url": "https://github.com/your-repo/docs/errors/PROCESS_002",
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now().isoformat()  # FIXED
         },
         "extraction_error": {
             "status": "error",
@@ -283,7 +283,7 @@ def enhanced_error_response(error_type, details=""):
             "details": details,
             "suggestion": "Verify the bill contains clear line items with names and amounts",
             "docs_url": "https://github.com/your-repo/docs/errors/EXTRACT_003",
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now().isoformat()  # FIXED
         }
     }
     
@@ -294,7 +294,7 @@ def enhanced_error_response(error_type, details=""):
         "details": details,
         "suggestion": "Please try again or check the documentation",
         "docs_url": "https://github.com/your-repo/docs",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now().isoformat()  # FIXED
     })
 
 # Initialize the intelligent extractor
@@ -384,7 +384,7 @@ def hackathon_endpoint():
                 "processing_time_seconds": round(processing_time, 2),
                 "items_processed": len(extraction_result["line_items"]),
                 "intelligence_level": "advanced_medical_analysis",
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now().isoformat()  # FIXED
             }
         }
         
@@ -412,7 +412,7 @@ def health_check():
         "version": "2.1.0",
         "processing_engine": "active",
         "intelligence_level": "advanced_medical",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now().isoformat(),  # FIXED
         "features_operational": {
             "bill_extraction": "operational",
             "medical_intelligence": "operational", 
@@ -459,7 +459,7 @@ def get_metrics():
             "insight_generation": "active",
             "quality_assessment": "active"
         },
-        "last_updated": datetime.utcnow().isoformat()
+        "last_updated": datetime.now().isoformat()  # FIXED
     })
 
 @app.route('/api/v1/demo', methods=['GET'])
