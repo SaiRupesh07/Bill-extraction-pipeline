@@ -46,6 +46,86 @@ class IntelligentBillExtractor:
     def __init__(self):
         self.ace_engine_active = True
         self.real_time_learning_active = True
+        
+        # Lightweight initialization
+        if ADVANCED_EXTRACTORS_AVAILABLE:
+            try:
+                self.feature_extractor = RealFeatureExtractor()
+                self.real_time_learner = RealTimeLearner()
+                logger.info("✅ Lightweight advanced features enabled")
+            except Exception as e:
+                logger.warning(f"⚠️ Advanced features failed: {e}")
+                self._setup_basic_extractors()
+        else:
+            self._setup_basic_extractors()
+    
+    def _setup_basic_extractors(self):
+        """Setup basic extractors without any heavy dependencies"""
+        self.feature_extractor = self._create_basic_extractor()
+        self.real_time_learner = self._create_basic_learner()
+        logger.info("🔧 Using ultra-light basic extraction")
+    
+    def _create_basic_extractor(self):
+        """Basic feature extraction without external dependencies"""
+        class BasicFeatureExtractor:
+            def __init__(self):
+                self.medical_terms = {
+                    "hospital": ["hospital", "medical", "surgery", "emergency"],
+                    "pharmacy": ["pharmacy", "drug", "prescription", "medication"],
+                    "clinic": ["clinic", "consultation", "checkup", "doctor"]
+                }
+            
+            def extract_url_features(self, document_url):
+                url_lower = document_url.lower()
+                features = {
+                    "medical_term_count": 0,
+                    "likely_bill_type": "standard_medical",
+                    "complexity_score": 0.5,
+                    "confidence_indicators": {"basic_extraction": True}
+                }
+                
+                # Count medical terms
+                for category, terms in self.medical_terms.items():
+                    for term in terms:
+                        if term in url_lower:
+                            features["medical_term_count"] += 1
+                            features["likely_bill_type"] = category
+                
+                # Adjust complexity based on terms found
+                if features["medical_term_count"] > 3:
+                    features["complexity_score"] = 0.8
+                elif features["medical_term_count"] > 1:
+                    features["complexity_score"] = 0.6
+                
+                return features
+        
+        return BasicFeatureExtractor()
+    
+    def _create_basic_learner(self):
+        """Basic learning system without ML dependencies"""
+        class BasicRealTimeLearner:
+            def __init__(self):
+                self.learning_cycles = 0
+                self.performance_history = []
+            
+            def record_success(self, confidence):
+                self.learning_cycles += 1
+                self.performance_history.append(confidence)
+                if len(self.performance_history) > 50:
+                    self.performance_history.pop(0)
+            
+            def get_learning_metrics(self):
+                return {
+                    "active": True,
+                    "learning_cycles": self.learning_cycles,
+                    "average_confidence": sum(self.performance_history) / len(self.performance_history) if self.performance_history else 0.75,
+                    "improvement": "+0.0%"  # Basic version doesn't actually learn
+                }
+        
+        return BasicRealTimeLearner()
+    def __init__(self):
+        self.ace_engine_active = True
+        self.real_time_learning_active = True
         self.medical_terminology = self._load_medical_terminology()
     
     def _load_medical_terminology(self):
@@ -404,6 +484,34 @@ def calculate_confidence_score(data):
     return data.get('confidence', 0.86)
 
 def detect_medical_context(data):
+    # Use the actual medical terms count from feature extraction
+    medical_terms_count = data.get('medical_terms_count', 0)
+    
+    # Calculate confidence based on actual terms found
+    if medical_terms_count > 10:
+        confidence = 0.95
+        complexity = "high"
+    elif medical_terms_count > 5:
+        confidence = 0.85
+        complexity = "medium"
+    elif medical_terms_count > 0:
+        confidence = 0.75
+        complexity = "low"
+    else:
+        confidence = 0.65
+        complexity = "unknown"
+    
+    # Always detect medical context for hospital bills
+    bill_type = data.get('bill_type', '')
+    is_medical_bill = medical_terms_count > 0 or 'hospital' in bill_type or 'medical' in bill_type
+    
+    return {
+        "is_medical_bill": is_medical_bill,
+        "confidence": confidence,
+        "detected_categories": ["procedures", "medications", "tests", "services", "equipment"],
+        "medical_terms_found": medical_terms_count,
+        "complexity_level": complexity
+    }
     return {
         "is_medical_bill": True,
         "confidence": 0.95,
