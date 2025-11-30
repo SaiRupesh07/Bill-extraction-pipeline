@@ -7,6 +7,26 @@ from datetime import datetime
 from collections import Counter
 import random
 
+import sys
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Version compatibility check
+python_version = sys.version_info
+logger.info(f"🚀 MedAI Extract Pro - Python {python_version.major}.{python_version.minor}.{python_version.micro}")
+
+# Lightweight imports only
+try:
+    from advanced_extractors import RealFeatureExtractor, RealTimeLearner
+    ADVANCED_EXTRACTORS_AVAILABLE = True
+    logger.info("✅ Advanced extractors loaded (lightweight mode)")
+except ImportError as e:
+    ADVANCED_EXTRACTORS_AVAILABLE = False
+    logger.info("🔧 Using built-in feature extraction")
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
